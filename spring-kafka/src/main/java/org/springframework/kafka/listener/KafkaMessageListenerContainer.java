@@ -1,18 +1,21 @@
 /*
  * Copyright 2016-2018 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
+
+//
+// Modified by sidmishraw for getting access to the consumer record that caused the listener to
+// fail.
+//
 
 package org.springframework.kafka.listener;
 
@@ -33,7 +36,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.stream.Collectors;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -49,7 +51,6 @@ import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
-
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.ConsumerFactory;
@@ -115,7 +116,8 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 	/**
 	 * Construct an instance with the supplied configuration properties.
-	 * @param consumerFactory the consumer factory.
+	 * 
+	 * @param consumerFactory     the consumer factory.
 	 * @param containerProperties the container properties.
 	 */
 	public KafkaMessageListenerContainer(ConsumerFactory<K, V> consumerFactory,
@@ -126,52 +128,55 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 	/**
 	 * Construct an instance with the supplied configuration properties and specific
 	 * topics/partitions/initialOffsets.
-	 * @param consumerFactory the consumer factory.
+	 * 
+	 * @param consumerFactory     the consumer factory.
 	 * @param containerProperties the container properties.
-	 * @param topicPartitions the topics/partitions; duplicates are eliminated.
+	 * @param topicPartitions     the topics/partitions; duplicates are eliminated.
 	 */
 	public KafkaMessageListenerContainer(ConsumerFactory<K, V> consumerFactory,
-			ContainerProperties containerProperties, TopicPartitionInitialOffset... topicPartitions) {
+			ContainerProperties containerProperties,
+			TopicPartitionInitialOffset... topicPartitions) {
 		this(null, consumerFactory, containerProperties, topicPartitions);
 	}
 
 	/**
 	 * Construct an instance with the supplied configuration properties.
-	 * @param container a delegating container (if this is a sub-container).
-	 * @param consumerFactory the consumer factory.
+	 * 
+	 * @param container           a delegating container (if this is a sub-container).
+	 * @param consumerFactory     the consumer factory.
 	 * @param containerProperties the container properties.
 	 */
 	KafkaMessageListenerContainer(AbstractMessageListenerContainer<K, V> container,
-			ConsumerFactory<K, V> consumerFactory,
-			ContainerProperties containerProperties) {
+			ConsumerFactory<K, V> consumerFactory, ContainerProperties containerProperties) {
 		this(container, consumerFactory, containerProperties, (TopicPartitionInitialOffset[]) null);
 	}
 
 	/**
 	 * Construct an instance with the supplied configuration properties and specific
 	 * topics/partitions/initialOffsets.
-	 * @param container a delegating container (if this is a sub-container).
-	 * @param consumerFactory the consumer factory.
+	 * 
+	 * @param container           a delegating container (if this is a sub-container).
+	 * @param consumerFactory     the consumer factory.
 	 * @param containerProperties the container properties.
-	 * @param topicPartitions the topics/partitions; duplicates are eliminated.
+	 * @param topicPartitions     the topics/partitions; duplicates are eliminated.
 	 */
 	KafkaMessageListenerContainer(AbstractMessageListenerContainer<K, V> container,
-			ConsumerFactory<K, V> consumerFactory,
-			ContainerProperties containerProperties, TopicPartitionInitialOffset... topicPartitions) {
+			ConsumerFactory<K, V> consumerFactory, ContainerProperties containerProperties,
+			TopicPartitionInitialOffset... topicPartitions) {
 		super(consumerFactory, containerProperties);
 		Assert.notNull(consumerFactory, "A ConsumerFactory must be provided");
 		this.container = container == null ? this : container;
 		if (topicPartitions != null) {
 			this.topicPartitions = Arrays.copyOf(topicPartitions, topicPartitions.length);
-		}
-		else {
+		} else {
 			this.topicPartitions = containerProperties.getTopicPartitions();
 		}
 	}
 
 	/**
-	 * Set a suffix to add to the {@code client.id} consumer property (if the consumer
-	 * factory supports it).
+	 * Set a suffix to add to the {@code client.id} consumer property (if the consumer factory
+	 * supports it).
+	 * 
 	 * @param clientIdSuffix the suffix to add.
 	 * @since 1.0.6
 	 */
@@ -180,26 +185,25 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 	}
 
 	/**
-	 * Return the {@link TopicPartition}s currently assigned to this container,
-	 * either explicitly or by Kafka; may be null if not assigned yet.
-	 * @return the {@link TopicPartition}s currently assigned to this container,
-	 * either explicitly or by Kafka; may be null if not assigned yet.
+	 * Return the {@link TopicPartition}s currently assigned to this container, either explicitly or
+	 * by Kafka; may be null if not assigned yet.
+	 * 
+	 * @return the {@link TopicPartition}s currently assigned to this container, either explicitly
+	 *         or by Kafka; may be null if not assigned yet.
 	 */
 	@Override
 	public Collection<TopicPartition> getAssignedPartitions() {
 		ListenerConsumer listenerConsumer = this.listenerConsumer;
 		if (listenerConsumer != null) {
 			if (listenerConsumer.definedPartitions != null) {
-				return Collections.unmodifiableCollection(listenerConsumer.definedPartitions.keySet());
-			}
-			else if (listenerConsumer.assignedPartitions != null) {
+				return Collections
+						.unmodifiableCollection(listenerConsumer.definedPartitions.keySet());
+			} else if (listenerConsumer.assignedPartitions != null) {
 				return Collections.unmodifiableCollection(listenerConsumer.assignedPartitions);
-			}
-			else {
+			} else {
 				return null;
 			}
-		}
-		else {
+		} else {
 			return null;
 		}
 	}
@@ -247,7 +251,8 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 					(getBeanName() == null ? "" : getBeanName()) + "-C-");
 			containerProperties.setConsumerTaskExecutor(consumerExecutor);
 		}
-		Assert.state(messageListener instanceof GenericMessageListener, "Listener must be a GenericListener");
+		Assert.state(messageListener instanceof GenericMessageListener,
+				"Listener must be a GenericListener");
 		this.listener = (GenericMessageListener<?>) messageListener;
 		ListenerType listenerType = ListenerUtils.determineListenerType(this.listener);
 		if (this.listener instanceof DelegatingMessageListener) {
@@ -259,8 +264,7 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 		}
 		this.listenerConsumer = new ListenerConsumer(this.listener, listenerType);
 		setRunning(true);
-		this.listenerConsumerFuture = containerProperties
-				.getConsumerTaskExecutor()
+		this.listenerConsumerFuture = containerProperties.getConsumerTaskExecutor()
 				.submitListenable(this.listenerConsumer);
 	}
 
@@ -271,7 +275,8 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 				@Override
 				public void onFailure(Throwable e) {
-					KafkaMessageListenerContainer.this.logger.error("Error while stopping the container: ", e);
+					KafkaMessageListenerContainer.this.logger
+							.error("Error while stopping the container: ", e);
 					if (callback != null) {
 						callback.run();
 					}
@@ -295,30 +300,30 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 	private void publishIdleContainerEvent(long idleTime, Consumer<?, ?> consumer, boolean paused) {
 		if (getApplicationEventPublisher() != null) {
-			getApplicationEventPublisher().publishEvent(new ListenerContainerIdleEvent(
-					this, idleTime, getBeanName(), getAssignedPartitions(), consumer, paused));
+			getApplicationEventPublisher().publishEvent(new ListenerContainerIdleEvent(this,
+					idleTime, getBeanName(), getAssignedPartitions(), consumer, paused));
 		}
 	}
 
-	private void publishNonResponsiveConsumerEvent(long timeSinceLastPoll, Consumer<?, ?> consumer) {
+	private void publishNonResponsiveConsumerEvent(long timeSinceLastPoll,
+			Consumer<?, ?> consumer) {
 		if (getApplicationEventPublisher() != null) {
-			getApplicationEventPublisher().publishEvent(
-					new NonResponsiveConsumerEvent(this, timeSinceLastPoll,
-							getBeanName(), getAssignedPartitions(), consumer));
+			getApplicationEventPublisher().publishEvent(new NonResponsiveConsumerEvent(this,
+					timeSinceLastPoll, getBeanName(), getAssignedPartitions(), consumer));
 		}
 	}
 
 	private void publishConsumerPausedEvent(Collection<TopicPartition> partitions) {
 		if (getApplicationEventPublisher() != null) {
-			getApplicationEventPublisher().publishEvent(new ConsumerPausedEvent(this,
-					Collections.unmodifiableCollection(partitions)));
+			getApplicationEventPublisher().publishEvent(
+					new ConsumerPausedEvent(this, Collections.unmodifiableCollection(partitions)));
 		}
 	}
 
 	private void publishConsumerResumedEvent(Collection<TopicPartition> partitions) {
 		if (getApplicationEventPublisher() != null) {
-			getApplicationEventPublisher().publishEvent(new ConsumerResumedEvent(this,
-					Collections.unmodifiableCollection(partitions)));
+			getApplicationEventPublisher().publishEvent(
+					new ConsumerResumedEvent(this, Collections.unmodifiableCollection(partitions)));
 		}
 	}
 
@@ -338,9 +343,10 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 		private final ContainerProperties containerProperties = getContainerProperties();
 
-		private final OffsetCommitCallback commitCallback = this.containerProperties.getCommitCallback() != null
-				? this.containerProperties.getCommitCallback()
-				: new LoggingCommitCallback();
+		private final OffsetCommitCallback commitCallback =
+				this.containerProperties.getCommitCallback() != null
+						? this.containerProperties.getCommitCallback()
+						: new LoggingCommitCallback();
 
 		private final Consumer<K, V> consumer;
 
@@ -358,47 +364,54 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 		private final boolean isBatchListener;
 
-		private final boolean autoCommit = KafkaMessageListenerContainer.this.consumerFactory.isAutoCommit();
+		private final boolean autoCommit =
+				KafkaMessageListenerContainer.this.consumerFactory.isAutoCommit();
 
-		private final boolean isManualAck = this.containerProperties.getAckMode().equals(AckMode.MANUAL);
+		private final boolean isManualAck =
+				this.containerProperties.getAckMode().equals(AckMode.MANUAL);
 
 		private final boolean isManualImmediateAck =
 				this.containerProperties.getAckMode().equals(AckMode.MANUAL_IMMEDIATE);
 
 		private final boolean isAnyManualAck = this.isManualAck || this.isManualImmediateAck;
 
-		private final boolean isRecordAck = this.containerProperties.getAckMode().equals(AckMode.RECORD);
+		private final boolean isRecordAck =
+				this.containerProperties.getAckMode().equals(AckMode.RECORD);
 
-		private final boolean isBatchAck = this.containerProperties.getAckMode().equals(AckMode.BATCH);
+		private final boolean isBatchAck =
+				this.containerProperties.getAckMode().equals(AckMode.BATCH);
 
 		private final BlockingQueue<ConsumerRecord<K, V>> acks = new LinkedBlockingQueue<>();
 
-		private final BlockingQueue<TopicPartitionInitialOffset> seeks = new LinkedBlockingQueue<>();
+		private final BlockingQueue<TopicPartitionInitialOffset> seeks =
+				new LinkedBlockingQueue<>();
 
 		private final ErrorHandler errorHandler;
 
 		private final BatchErrorHandler batchErrorHandler;
 
-		private final PlatformTransactionManager transactionManager = this.containerProperties.getTransactionManager();
+		private final PlatformTransactionManager transactionManager =
+				this.containerProperties.getTransactionManager();
 
 		@SuppressWarnings("rawtypes")
 		private final KafkaAwareTransactionManager kafkaTxManager =
 				this.transactionManager instanceof KafkaAwareTransactionManager
-						? ((KafkaAwareTransactionManager) this.transactionManager) : null;
+						? ((KafkaAwareTransactionManager) this.transactionManager)
+						: null;
 
 		private final TransactionTemplate transactionTemplate;
 
 		private final String consumerGroupId = this.containerProperties.getGroupId() == null
-				? (String) KafkaMessageListenerContainer.this.consumerFactory.getConfigurationProperties()
-					.get(ConsumerConfig.GROUP_ID_CONFIG)
+				? (String) KafkaMessageListenerContainer.this.consumerFactory
+						.getConfigurationProperties().get(ConsumerConfig.GROUP_ID_CONFIG)
 				: this.containerProperties.getGroupId();
 
 		private final TaskScheduler taskScheduler;
 
 		private final ScheduledFuture<?> monitorTask;
 
-		private final LogIfLevelEnabled commitLogger = new LogIfLevelEnabled(this.logger,
-				this.containerProperties.getCommitLogLevel());
+		private final LogIfLevelEnabled commitLogger =
+				new LogIfLevelEnabled(this.logger, this.containerProperties.getCommitLogLevel());
 
 		private volatile Map<TopicPartition, OffsetMetadata> definedPartitions;
 
@@ -421,11 +434,10 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 		@SuppressWarnings("unchecked")
 		ListenerConsumer(GenericMessageListener<?> listener, ListenerType listenerType) {
 			Assert.state(!this.isAnyManualAck || !this.autoCommit,
-					"Consumer cannot be configured for auto commit for ackMode " + this.containerProperties.getAckMode());
-			final Consumer<K, V> consumer =
-					KafkaMessageListenerContainer.this.consumerFactory.createConsumer(
-							this.consumerGroupId,
-							this.containerProperties.getClientId(),
+					"Consumer cannot be configured for auto commit for ackMode "
+							+ this.containerProperties.getAckMode());
+			final Consumer<K, V> consumer = KafkaMessageListenerContainer.this.consumerFactory
+					.createConsumer(this.consumerGroupId, this.containerProperties.getClientId(),
 							KafkaMessageListenerContainer.this.clientIdSuffix);
 			this.consumer = consumer;
 
@@ -433,19 +445,20 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 			if (KafkaMessageListenerContainer.this.topicPartitions == null) {
 				if (this.containerProperties.getTopicPattern() != null) {
-					consumer.subscribe(this.containerProperties.getTopicPattern(), rebalanceListener);
+					consumer.subscribe(this.containerProperties.getTopicPattern(),
+							rebalanceListener);
+				} else {
+					consumer.subscribe(Arrays.asList(this.containerProperties.getTopics()),
+							rebalanceListener);
 				}
-				else {
-					consumer.subscribe(Arrays.asList(this.containerProperties.getTopics()), rebalanceListener);
-				}
-			}
-			else {
+			} else {
 				List<TopicPartitionInitialOffset> topicPartitions =
 						Arrays.asList(KafkaMessageListenerContainer.this.topicPartitions);
 				this.definedPartitions = new HashMap<>(topicPartitions.size());
 				for (TopicPartitionInitialOffset topicPartition : topicPartitions) {
 					this.definedPartitions.put(topicPartition.topicPartition(),
-							new OffsetMetadata(topicPartition.initialOffset(), topicPartition.isRelativeToCurrent(),
+							new OffsetMetadata(topicPartition.initialOffset(),
+									topicPartition.isRelativeToCurrent(),
 									topicPartition.getPosition()));
 				}
 				consumer.assign(new ArrayList<>(this.definedPartitions.keySet()));
@@ -456,43 +469,39 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 				this.listener = null;
 				this.batchListener = (BatchMessageListener<K, V>) listener;
 				this.isBatchListener = true;
-			}
-			else if (listener instanceof MessageListener) {
+			} else if (listener instanceof MessageListener) {
 				this.listener = (MessageListener<K, V>) listener;
 				this.batchListener = null;
 				this.isBatchListener = false;
-			}
-			else {
+			} else {
 				throw new IllegalArgumentException("Listener must be one of 'MessageListener', "
 						+ "'BatchMessageListener', or the variants that are consumer aware and/or "
-						+ "Acknowledging"
-						+ " not " + listener.getClass().getName());
+						+ "Acknowledging" + " not " + listener.getClass().getName());
 			}
 			this.listenerType = listenerType;
-			this.isConsumerAwareListener = listenerType.equals(ListenerType.ACKNOWLEDGING_CONSUMER_AWARE)
-					|| listenerType.equals(ListenerType.CONSUMER_AWARE);
+			this.isConsumerAwareListener =
+					listenerType.equals(ListenerType.ACKNOWLEDGING_CONSUMER_AWARE)
+							|| listenerType.equals(ListenerType.CONSUMER_AWARE);
 			if (this.isBatchListener) {
 				validateErrorHandler(true);
 				this.errorHandler = new LoggingErrorHandler();
 				this.batchErrorHandler = determineBatchErrorHandler(errHandler);
-			}
-			else {
+			} else {
 				validateErrorHandler(false);
 				this.errorHandler = determineErrorHandler(errHandler);
 				this.batchErrorHandler = new BatchLoggingErrorHandler();
 			}
-			Assert.state(!this.isBatchListener || !this.isRecordAck, "Cannot use AckMode.RECORD with a batch listener");
+			Assert.state(!this.isBatchListener || !this.isRecordAck,
+					"Cannot use AckMode.RECORD with a batch listener");
 			if (this.transactionManager != null) {
 				this.transactionTemplate = new TransactionTemplate(this.transactionManager);
-			}
-			else {
+			} else {
 				this.transactionTemplate = null;
 			}
 			if (this.containerProperties.getScheduler() != null) {
 				this.taskScheduler = this.containerProperties.getScheduler();
 				this.taskSchedulerExplicitlySet = true;
-			}
-			else {
+			} else {
 				ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
 				threadPoolTaskScheduler.initialize();
 				this.taskScheduler = threadPoolTaskScheduler;
@@ -506,8 +515,9 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 		protected void checkConsumer() {
 			long timeSinceLastPoll = System.currentTimeMillis() - this.lastPoll;
-			if (((float) timeSinceLastPoll) / (float) this.containerProperties.getPollTimeout()
-					> this.containerProperties.getNoPollThreshold()) {
+			if (((float) timeSinceLastPoll)
+					/ (float) this.containerProperties.getPollTimeout() > this.containerProperties
+							.getNoPollThreshold()) {
 				publishNonResponsiveConsumerEvent(timeSinceLastPoll, this.consumer);
 			}
 		}
@@ -525,24 +535,27 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 		public ConsumerRebalanceListener createRebalanceListener(final Consumer<K, V> consumer) {
 			return new ConsumerRebalanceListener() {
 
-				final ConsumerRebalanceListener userListener = getContainerProperties().getConsumerRebalanceListener();
+				final ConsumerRebalanceListener userListener =
+						getContainerProperties().getConsumerRebalanceListener();
 
 				final ConsumerAwareRebalanceListener consumerAwareListener =
 						userListener instanceof ConsumerAwareRebalanceListener
-								? (ConsumerAwareRebalanceListener) userListener : null;
+								? (ConsumerAwareRebalanceListener) userListener
+								: null;
 
 				@Override
 				public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
 					if (this.consumerAwareListener != null) {
-						this.consumerAwareListener.onPartitionsRevokedBeforeCommit(consumer, partitions);
-					}
-					else {
+						this.consumerAwareListener.onPartitionsRevokedBeforeCommit(consumer,
+								partitions);
+					} else {
 						this.userListener.onPartitionsRevoked(partitions);
 					}
 					// Wait until now to commit, in case the user listener added acks
 					commitPendingAcks();
 					if (this.consumerAwareListener != null) {
-						this.consumerAwareListener.onPartitionsRevokedAfterCommit(consumer, partitions);
+						this.consumerAwareListener.onPartitionsRevokedAfterCommit(consumer,
+								partitions);
 					}
 				}
 
@@ -557,36 +570,44 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 						Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>();
 						for (TopicPartition partition : partitions) {
 							try {
-								offsets.put(partition, new OffsetAndMetadata(consumer.position(partition)));
-							}
-							catch (NoOffsetForPartitionException e) {
+								offsets.put(partition,
+										new OffsetAndMetadata(consumer.position(partition)));
+							} catch (NoOffsetForPartitionException e) {
 								ListenerConsumer.this.fatalError = true;
-								ListenerConsumer.this.logger.error("No offset and no reset policy", e);
+								ListenerConsumer.this.logger.error("No offset and no reset policy",
+										e);
 								return;
 							}
 						}
-						ListenerConsumer.this.commitLogger.log(() -> "Committing on assignment: " + offsets);
-						if (ListenerConsumer.this.transactionTemplate != null &&
-								ListenerConsumer.this.kafkaTxManager != null) {
-							ListenerConsumer.this.transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+						ListenerConsumer.this.commitLogger
+								.log(() -> "Committing on assignment: " + offsets);
+						if (ListenerConsumer.this.transactionTemplate != null
+								&& ListenerConsumer.this.kafkaTxManager != null) {
+							ListenerConsumer.this.transactionTemplate
+									.execute(new TransactionCallbackWithoutResult() {
 
-								@SuppressWarnings({ "unchecked", "rawtypes" })
-								@Override
-								protected void doInTransactionWithoutResult(TransactionStatus status) {
-									((KafkaResourceHolder) TransactionSynchronizationManager
-											.getResource(ListenerConsumer.this.kafkaTxManager.getProducerFactory()))
-											.getProducer().sendOffsetsToTransaction(offsets,
-											ListenerConsumer.this.consumerGroupId);
-								}
+										@SuppressWarnings({"unchecked", "rawtypes"})
+										@Override
+										protected void doInTransactionWithoutResult(
+												TransactionStatus status) {
+											((KafkaResourceHolder) TransactionSynchronizationManager
+													.getResource(
+															ListenerConsumer.this.kafkaTxManager
+																	.getProducerFactory()))
+																			.getProducer()
+																			.sendOffsetsToTransaction(
+																					offsets,
+																					ListenerConsumer.this.consumerGroupId);
+										}
 
-							});
-						}
-						else if (KafkaMessageListenerContainer.this.getContainerProperties().isSyncCommits()) {
+									});
+						} else if (KafkaMessageListenerContainer.this.getContainerProperties()
+								.isSyncCommits()) {
 							ListenerConsumer.this.consumer.commitSync(offsets);
-						}
-						else {
+						} else {
 							ListenerConsumer.this.consumer.commitAsync(offsets,
-									KafkaMessageListenerContainer.this.getContainerProperties().getCommitCallback());
+									KafkaMessageListenerContainer.this.getContainerProperties()
+											.getCommitCallback());
 						}
 					}
 					if (ListenerConsumer.this.genericListener instanceof ConsumerSeekAware) {
@@ -594,8 +615,7 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 					}
 					if (this.consumerAwareListener != null) {
 						this.consumerAwareListener.onPartitionsAssigned(consumer, partitions);
-					}
-					else {
+					} else {
 						this.userListener.onPartitionsAssigned(partitions);
 					}
 				}
@@ -606,13 +626,15 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 		private void seekPartitions(Collection<TopicPartition> partitions, boolean idle) {
 			Map<TopicPartition, Long> current = new HashMap<>();
 			for (TopicPartition topicPartition : partitions) {
-				current.put(topicPartition, ListenerConsumer.this.consumer.position(topicPartition));
+				current.put(topicPartition,
+						ListenerConsumer.this.consumer.position(topicPartition));
 			}
 			ConsumerSeekCallback callback = new ConsumerSeekCallback() {
 
 				@Override
 				public void seek(String topic, int partition, long offset) {
-					ListenerConsumer.this.consumer.seek(new TopicPartition(topic, partition), offset);
+					ListenerConsumer.this.consumer.seek(new TopicPartition(topic, partition),
+							offset);
 				}
 
 				@Override
@@ -629,10 +651,11 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 			};
 			if (idle) {
-				((ConsumerSeekAware) ListenerConsumer.this.genericListener).onIdleContainer(current, callback);
-			}
-			else {
-				((ConsumerSeekAware) ListenerConsumer.this.genericListener).onPartitionsAssigned(current, callback);
+				((ConsumerSeekAware) ListenerConsumer.this.genericListener).onIdleContainer(current,
+						callback);
+			} else {
+				((ConsumerSeekAware) ListenerConsumer.this.genericListener)
+						.onPartitionsAssigned(current, callback);
 			}
 		}
 
@@ -647,14 +670,15 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 				if (t.equals(ErrorHandler.class)) {
 					ok = !batch;
 					break;
-				}
-				else if (t.equals(BatchErrorHandler.class)) {
+				} else if (t.equals(BatchErrorHandler.class)) {
 					ok = batch;
 					break;
 				}
 			}
-			Assert.state(ok, "Error handler is not compatible with the message listener, expecting an instance of "
-					+ (batch ? "BatchErrorHandler" : "ErrorHandler") + " not " + errHandler.getClass().getName());
+			Assert.state(ok,
+					"Error handler is not compatible with the message listener, expecting an instance of "
+							+ (batch ? "BatchErrorHandler" : "ErrorHandler") + " not "
+							+ errHandler.getClass().getName());
 		}
 
 		@Override
@@ -676,8 +700,7 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 			if (isRunning() && this.definedPartitions != null) {
 				try {
 					initPartitionsIfNeeded();
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					this.logger.error("Failed to set initial offsets", e);
 				}
 			}
@@ -697,11 +720,13 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 						}
 						publishConsumerPausedEvent(this.consumer.assignment());
 					}
-					ConsumerRecords<K, V> records = this.consumer.poll(this.containerProperties.getPollTimeout());
+					ConsumerRecords<K, V> records =
+							this.consumer.poll(this.containerProperties.getPollTimeout());
 					this.lastPoll = System.currentTimeMillis();
 					if (this.consumerPaused && !isPaused()) {
 						if (this.logger.isDebugEnabled()) {
-							this.logger.debug("Resuming consumption from: " + this.consumer.paused());
+							this.logger
+									.debug("Resuming consumption from: " + this.consumer.paused());
 						}
 						Set<TopicPartition> paused = this.consumer.paused();
 						this.consumer.resume(paused);
@@ -712,10 +737,10 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 						this.logger.debug("Received: " + records.count() + " records");
 						if (records.count() > 0 && this.logger.isTraceEnabled()) {
 							this.logger.trace(records.partitions().stream()
-								.flatMap(p -> records.records(p).stream())
-								// map to same format as send metadata toString()
-								.map(r -> r.topic() + "-" + r.partition() + "@" + r.offset())
-								.collect(Collectors.toList()));
+									.flatMap(p -> records.records(p).stream())
+									// map to same format as send metadata toString()
+									.map(r -> r.topic() + "-" + r.partition() + "@" + r.offset())
+									.collect(Collectors.toList()));
 						}
 					}
 					if (records != null && records.count() > 0) {
@@ -723,14 +748,15 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 							lastReceive = System.currentTimeMillis();
 						}
 						invokeListener(records);
-					}
-					else {
+					} else {
 						if (this.containerProperties.getIdleEventInterval() != null) {
 							long now = System.currentTimeMillis();
 							if (now > lastReceive + this.containerProperties.getIdleEventInterval()
-									&& now > lastAlertAt + this.containerProperties.getIdleEventInterval()) {
-								publishIdleContainerEvent(now - lastReceive, this.isConsumerAwareListener
-										? this.consumer : null, this.consumerPaused);
+									&& now > lastAlertAt
+											+ this.containerProperties.getIdleEventInterval()) {
+								publishIdleContainerEvent(now - lastReceive,
+										this.isConsumerAwareListener ? this.consumer : null,
+										this.consumerPaused);
 								lastAlertAt = now;
 								if (this.genericListener instanceof ConsumerSeekAware) {
 									seekPartitions(getAssignedPartitions(), true);
@@ -738,16 +764,13 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 							}
 						}
 					}
-				}
-				catch (WakeupException e) {
+				} catch (WakeupException e) {
 					// Ignore, we're stopping
-				}
-				catch (NoOffsetForPartitionException nofpe) {
+				} catch (NoOffsetForPartitionException nofpe) {
 					this.fatalError = true;
 					ListenerConsumer.this.logger.error("No offset and no reset policy", nofpe);
 					break;
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					handleConsumerException(e);
 				}
 			}
@@ -757,14 +780,13 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 					commitPendingAcks();
 					try {
 						this.consumer.unsubscribe();
-					}
-					catch (WakeupException e) {
+					} catch (WakeupException e) {
 						// No-op. Continue process
 					}
 				}
-			}
-			else {
-				ListenerConsumer.this.logger.error("No offset and no reset policy; stopping container");
+			} else {
+				ListenerConsumer.this.logger
+						.error("No offset and no reset policy; stopping container");
 				KafkaMessageListenerContainer.this.stop();
 			}
 			this.monitorTask.cancel(true);
@@ -776,8 +798,9 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 		}
 
 		/**
-		 * Handle exceptions thrown by the consumer outside of message listener
-		 * invocation (e.g. commit exceptions).
+		 * Handle exceptions thrown by the consumer outside of message listener invocation (e.g.
+		 * commit exceptions).
+		 * 
 		 * @param e the exception.
 		 */
 		protected void handleConsumerException(Exception e) {
@@ -785,16 +808,14 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 				if (!this.isBatchListener && this.errorHandler != null) {
 					this.errorHandler.handle(e, Collections.emptyList(), this.consumer,
 							KafkaMessageListenerContainer.this);
-				}
-				else if (this.isBatchListener && this.batchErrorHandler != null) {
-					this.batchErrorHandler.handle(e, new ConsumerRecords<K, V>(Collections.emptyMap()), this.consumer,
+				} else if (this.isBatchListener && this.batchErrorHandler != null) {
+					this.batchErrorHandler.handle(e,
+							new ConsumerRecords<K, V>(Collections.emptyMap()), this.consumer,
 							KafkaMessageListenerContainer.this);
-				}
-				else {
+				} else {
 					this.logger.error("Consumer exception", e);
 				}
-			}
-			catch (Exception ex) {
+			} catch (Exception ex) {
 				this.logger.error("Consumer exception", ex);
 			}
 		}
@@ -825,36 +846,31 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 			if (!Thread.currentThread().equals(this.consumerThread)) {
 				try {
 					this.acks.put(record);
-				}
-				catch (InterruptedException e) {
+				} catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 					throw new KafkaException("Interrupted while storing ack", e);
 				}
-			}
-			else {
+			} else {
 				if (this.isManualImmediateAck) {
 					try {
 						ackImmediate(record);
-					}
-					catch (WakeupException e) {
+					} catch (WakeupException e) {
 						// ignore - not polling
 					}
-				}
-				else {
+				} else {
 					addOffset(record);
 				}
 			}
 		}
 
 		private void ackImmediate(ConsumerRecord<K, V> record) {
-			Map<TopicPartition, OffsetAndMetadata> commits = Collections.singletonMap(
-					new TopicPartition(record.topic(), record.partition()),
-					new OffsetAndMetadata(record.offset() + 1));
+			Map<TopicPartition, OffsetAndMetadata> commits =
+					Collections.singletonMap(new TopicPartition(record.topic(), record.partition()),
+							new OffsetAndMetadata(record.offset() + 1));
 			this.commitLogger.log(() -> "Committing: " + commits);
 			if (this.containerProperties.isSyncCommits()) {
 				this.consumer.commitSync(commits);
-			}
-			else {
+			} else {
 				this.consumer.commitAsync(commits, this.commitCallback);
 			}
 		}
@@ -862,8 +878,7 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 		private void invokeListener(final ConsumerRecords<K, V> records) {
 			if (this.isBatchListener) {
 				invokeBatchListener(records);
-			}
-			else {
+			} else {
 				invokeRecordListener(records);
 			}
 		}
@@ -877,14 +892,13 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 			if (recordList.size() > 0) {
 				if (this.transactionTemplate != null) {
 					invokeBatchListenerInTx(records, recordList);
-				}
-				else {
+				} else {
 					doInvokeBatchListener(records, recordList, null);
 				}
 			}
 		}
 
-		@SuppressWarnings({ "rawtypes" })
+		@SuppressWarnings({"rawtypes"})
 		private void invokeBatchListenerInTx(final ConsumerRecords<K, V> records,
 				List<ConsumerRecord<K, V>> recordList) {
 			try {
@@ -895,16 +909,17 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 						Producer producer = null;
 						if (ListenerConsumer.this.kafkaTxManager != null) {
 							producer = ((KafkaResourceHolder) TransactionSynchronizationManager
-									.getResource(ListenerConsumer.this.kafkaTxManager.getProducerFactory())).getProducer();
+									.getResource(ListenerConsumer.this.kafkaTxManager
+											.getProducerFactory())).getProducer();
 						}
-						RuntimeException aborted = doInvokeBatchListener(records, recordList, producer);
+						RuntimeException aborted =
+								doInvokeBatchListener(records, recordList, producer);
 						if (aborted != null) {
 							throw aborted;
 						}
 					}
 				});
-			}
-			catch (RuntimeException e) {
+			} catch (RuntimeException e) {
 				this.logger.error("Transaction rolled back", e);
 				getAfterRollbackProcessor().process(recordList, this.consumer);
 			}
@@ -912,27 +927,27 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 		/**
 		 * Actually invoke the batch listener.
-		 * @param records the records (needed to invoke the error handler)
+		 * 
+		 * @param records    the records (needed to invoke the error handler)
 		 * @param recordList the list of records (actually passed to the listener).
-		 * @param producer the producer - only if we're running in a transaction, null
-		 * otherwise.
+		 * @param producer   the producer - only if we're running in a transaction, null otherwise.
 		 * @return an exception.
 		 * @throws Error an error.
 		 */
 		private RuntimeException doInvokeBatchListener(final ConsumerRecords<K, V> records,
-				List<ConsumerRecord<K, V>> recordList, @SuppressWarnings("rawtypes") Producer producer) throws Error {
+				List<ConsumerRecord<K, V>> recordList,
+				@SuppressWarnings("rawtypes") Producer producer) throws Error {
 			try {
 				switch (this.listenerType) {
 					case ACKNOWLEDGING_CONSUMER_AWARE:
 						this.batchListener.onMessage(recordList,
-								this.isAnyManualAck
-										? new ConsumerBatchAcknowledgment(recordList)
-										: null, this.consumer);
+								this.isAnyManualAck ? new ConsumerBatchAcknowledgment(recordList)
+										: null,
+								this.consumer);
 						break;
 					case ACKNOWLEDGING:
 						this.batchListener.onMessage(recordList,
-								this.isAnyManualAck
-										? new ConsumerBatchAcknowledgment(recordList)
+								this.isAnyManualAck ? new ConsumerBatchAcknowledgment(recordList)
 										: null);
 						break;
 					case CONSUMER_AWARE:
@@ -950,9 +965,9 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 						sendOffsetsToTransaction(producer);
 					}
 				}
-			}
-			catch (RuntimeException e) {
-				if (this.containerProperties.isAckOnError() && !this.autoCommit && producer == null) {
+			} catch (RuntimeException e) {
+				if (this.containerProperties.isAckOnError() && !this.autoCommit
+						&& producer == null) {
 					for (ConsumerRecord<K, V> record : getHighestOffsetRecords(recordList)) {
 						this.acks.add(record);
 					}
@@ -962,10 +977,10 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 				}
 				try {
 					if (this.batchErrorHandler instanceof ContainerAwareBatchErrorHandler) {
-						((ContainerAwareBatchErrorHandler) this.batchErrorHandler)
-							.handle(e, records, this.consumer, KafkaMessageListenerContainer.this.container);
-					}
-					else {
+						((ContainerAwareBatchErrorHandler) this.batchErrorHandler).handle(e,
+								records, this.consumer,
+								KafkaMessageListenerContainer.this.container);
+					} else {
 						this.batchErrorHandler.handle(e, records, this.consumer);
 					}
 					// if the handler handled the error (no exception), go ahead and commit
@@ -975,17 +990,14 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 						}
 						sendOffsetsToTransaction(producer);
 					}
-				}
-				catch (RuntimeException ee) {
+				} catch (RuntimeException ee) {
 					this.logger.error("Error handler threw an exception", ee);
 					return ee;
-				}
-				catch (Error er) { //NOSONAR
+				} catch (Error er) { // NOSONAR
 					this.logger.error("Error handler threw an error", er);
 					throw er;
 				}
-			}
-			catch (InterruptedException e) {
+			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
 			return null;
@@ -994,17 +1006,17 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 		private void invokeRecordListener(final ConsumerRecords<K, V> records) {
 			if (this.transactionTemplate != null) {
 				invokeRecordListenerInTx(records);
-			}
-			else {
+			} else {
 				doInvokeWithRecords(records);
 			}
 		}
 
 		/**
 		 * Invoke the listener with each record in a separate transaction.
+		 * 
 		 * @param records the records.
 		 */
-		@SuppressWarnings({ "rawtypes" })
+		@SuppressWarnings({"rawtypes"})
 		private void invokeRecordListenerInTx(final ConsumerRecords<K, V> records) {
 			Iterator<ConsumerRecord<K, V>> iterator = records.iterator();
 			while (iterator.hasNext()) {
@@ -1022,17 +1034,18 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 							Producer producer = null;
 							if (ListenerConsumer.this.kafkaTxManager != null) {
 								producer = ((KafkaResourceHolder) TransactionSynchronizationManager
-										.getResource(ListenerConsumer.this.kafkaTxManager.getProducerFactory())).getProducer();
+										.getResource(ListenerConsumer.this.kafkaTxManager
+												.getProducerFactory())).getProducer();
 							}
-							RuntimeException aborted = doInvokeRecordListener(record, producer, iterator);
+							RuntimeException aborted =
+									doInvokeRecordListener(record, producer, iterator);
 							if (aborted != null) {
 								throw aborted;
 							}
 						}
 
 					});
-				}
-				catch (RuntimeException e) {
+				} catch (RuntimeException e) {
 					this.logger.error("Transaction rolled back", e);
 					List<ConsumerRecord<K, V>> unprocessed = new ArrayList<>();
 					unprocessed.add(record);
@@ -1040,8 +1053,7 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 						unprocessed.add(iterator.next());
 					}
 					getAfterRollbackProcessor().process(unprocessed, this.consumer);
-				}
-				finally {
+				} finally {
 					TransactionSupport.clearTransactionIdSuffix();
 				}
 			}
@@ -1060,11 +1072,11 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 		/**
 		 * Actually invoke the listener.
-		 * @param record the record.
-		 * @param producer the producer - only if we're running in a transaction, null
-		 * otherwise.
+		 * 
+		 * @param record   the record.
+		 * @param producer the producer - only if we're running in a transaction, null otherwise.
 		 * @param iterator the {@link ConsumerRecords} iterator - used only if a
-		 * {@link RemainingRecordsErrorHandler} is being used.
+		 *                 {@link RemainingRecordsErrorHandler} is being used.
 		 * @return an exception.
 		 * @throws Error an error.
 		 */
@@ -1075,27 +1087,24 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 				switch (this.listenerType) {
 					case ACKNOWLEDGING_CONSUMER_AWARE:
 						this.listener.onMessage(record,
-								this.isAnyManualAck
-										? new ConsumerAcknowledgment(record)
-										: null, this.consumer);
+								this.isAnyManualAck ? new ConsumerAcknowledgment(record) : null,
+								this.consumer);
 						break;
 					case CONSUMER_AWARE:
 						this.listener.onMessage(record, this.consumer);
 						break;
 					case ACKNOWLEDGING:
 						this.listener.onMessage(record,
-								this.isAnyManualAck
-										? new ConsumerAcknowledgment(record)
-										: null);
+								this.isAnyManualAck ? new ConsumerAcknowledgment(record) : null);
 						break;
 					case SIMPLE:
 						this.listener.onMessage(record);
 						break;
 				}
 				ackCurrent(record, producer);
-			}
-			catch (RuntimeException e) {
-				if (this.containerProperties.isAckOnError() && !this.autoCommit && producer == null) {
+			} catch (RuntimeException e) {
+				if (this.containerProperties.isAckOnError() && !this.autoCommit
+						&& producer == null) {
 					ackCurrent(record, producer);
 				}
 				if (this.errorHandler == null) {
@@ -1111,21 +1120,18 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 						while (iterator.hasNext()) {
 							records.add(iterator.next());
 						}
-						((ContainerAwareErrorHandler) this.errorHandler).handle(e, records, this.consumer,
-								KafkaMessageListenerContainer.this.container);
-					}
-					else {
+						((ContainerAwareErrorHandler) this.errorHandler).handle(e, records,
+								this.consumer, KafkaMessageListenerContainer.this.container);
+					} else {
 						this.errorHandler.handle(e, record, this.consumer);
 					}
 					if (producer != null) {
 						ackCurrent(record, producer);
 					}
-				}
-				catch (RuntimeException ee) {
+				} catch (RuntimeException ee) {
 					this.logger.error("Error handler threw an exception", ee);
 					return ee;
-				}
-				catch (Error er) { //NOSONAR
+				} catch (Error er) { // NOSONAR
 					this.logger.error("Error handler threw an error", er);
 					throw er;
 				}
@@ -1133,38 +1139,35 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 			return null;
 		}
 
-		public void ackCurrent(final ConsumerRecord<K, V> record, @SuppressWarnings("rawtypes") Producer producer) {
+		public void ackCurrent(final ConsumerRecord<K, V> record,
+				@SuppressWarnings("rawtypes") Producer producer) {
 			if (this.isRecordAck) {
-				Map<TopicPartition, OffsetAndMetadata> offsetsToCommit =
-						Collections.singletonMap(new TopicPartition(record.topic(), record.partition()),
-								new OffsetAndMetadata(record.offset() + 1));
+				Map<TopicPartition, OffsetAndMetadata> offsetsToCommit = Collections.singletonMap(
+						new TopicPartition(record.topic(), record.partition()),
+						new OffsetAndMetadata(record.offset() + 1));
 				if (producer == null) {
 					this.commitLogger.log(() -> "Committing: " + offsetsToCommit);
 					if (this.containerProperties.isSyncCommits()) {
 						this.consumer.commitSync(offsetsToCommit);
-					}
-					else {
+					} else {
 						this.consumer.commitAsync(offsetsToCommit, this.commitCallback);
 					}
-				}
-				else {
+				} else {
 					this.acks.add(record);
 				}
-			}
-			else if (!this.isAnyManualAck && !this.autoCommit) {
+			} else if (!this.isAnyManualAck && !this.autoCommit) {
 				this.acks.add(record);
 			}
 			if (producer != null) {
 				try {
 					sendOffsetsToTransaction(producer);
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					this.logger.error("Send offsets to transaction failed", e);
 				}
 			}
 		}
 
-		@SuppressWarnings({ "unchecked", "rawtypes" })
+		@SuppressWarnings({"unchecked", "rawtypes"})
 		private void sendOffsetsToTransaction(Producer producer) {
 			handleAcks();
 			Map<TopicPartition, OffsetAndMetadata> commits = buildCommits();
@@ -1186,34 +1189,33 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 						|| (ackMode.equals(AckMode.COUNT) && countExceeded)) {
 					if (this.logger.isDebugEnabled() && ackMode.equals(AckMode.COUNT)) {
 						this.logger.debug("Committing in AckMode.COUNT because count " + this.count
-								+ " exceeds configured limit of " + this.containerProperties.getAckCount());
+								+ " exceeds configured limit of "
+								+ this.containerProperties.getAckCount());
 					}
 					commitIfNecessary();
 					this.count = 0;
-				}
-				else {
+				} else {
 					now = System.currentTimeMillis();
 					boolean elapsed = now - this.last > this.containerProperties.getAckTime();
 					if (ackMode.equals(AckMode.TIME) && elapsed) {
 						if (this.logger.isDebugEnabled()) {
-							this.logger.debug("Committing in AckMode.TIME " +
-									"because time elapsed exceeds configured limit of " +
-									this.containerProperties.getAckTime());
+							this.logger.debug("Committing in AckMode.TIME "
+									+ "because time elapsed exceeds configured limit of "
+									+ this.containerProperties.getAckTime());
 						}
 						commitIfNecessary();
 						this.last = now;
-					}
-					else if (ackMode.equals(AckMode.COUNT_TIME) && (elapsed || countExceeded)) {
+					} else if (ackMode.equals(AckMode.COUNT_TIME) && (elapsed || countExceeded)) {
 						if (this.logger.isDebugEnabled()) {
 							if (elapsed) {
-								this.logger.debug("Committing in AckMode.COUNT_TIME " +
-										"because time elapsed exceeds configured limit of " +
-										this.containerProperties.getAckTime());
-							}
-							else {
-								this.logger.debug("Committing in AckMode.COUNT_TIME " +
-										"because count " + this.count + " exceeds configured limit of" +
-										this.containerProperties.getAckCount());
+								this.logger.debug("Committing in AckMode.COUNT_TIME "
+										+ "because time elapsed exceeds configured limit of "
+										+ this.containerProperties.getAckTime());
+							} else {
+								this.logger.debug(
+										"Committing in AckMode.COUNT_TIME " + "because count "
+												+ this.count + " exceeds configured limit of"
+												+ this.containerProperties.getAckCount());
 							}
 						}
 
@@ -1235,15 +1237,13 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 					SeekPosition position = offset.getPosition();
 					if (position == null) {
 						this.consumer.seek(offset.topicPartition(), offset.initialOffset());
-					}
-					else if (position.equals(SeekPosition.BEGINNING)) {
-						this.consumer.seekToBeginning(Collections.singletonList(offset.topicPartition()));
-					}
-					else {
+					} else if (position.equals(SeekPosition.BEGINNING)) {
+						this.consumer.seekToBeginning(
+								Collections.singletonList(offset.topicPartition()));
+					} else {
 						this.consumer.seekToEnd(Collections.singletonList(offset.topicPartition()));
 					}
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					this.logger.error("Exception while seeking " + offset, e);
 				}
 				offset = this.seeks.poll();
@@ -1252,21 +1252,19 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 		private void initPartitionsIfNeeded() {
 			/*
-			 * Note: initial position setting is only supported with explicit topic assignment.
-			 * When using auto assignment (subscribe), the ConsumerRebalanceListener is not
-			 * called until we poll() the consumer. Users can use a ConsumerAwareRebalanceListener
-			 * or a ConsumerSeekAware listener in that case.
+			 * Note: initial position setting is only supported with explicit topic assignment. When
+			 * using auto assignment (subscribe), the ConsumerRebalanceListener is not called until
+			 * we poll() the consumer. Users can use a ConsumerAwareRebalanceListener or a
+			 * ConsumerSeekAware listener in that case.
 			 */
 			Map<TopicPartition, OffsetMetadata> partitions = new HashMap<>(this.definedPartitions);
 			Set<TopicPartition> beginnings = partitions.entrySet().stream()
 					.filter(e -> SeekPosition.BEGINNING.equals(e.getValue().seekPosition))
-					.map(e -> e.getKey())
-					.collect(Collectors.toSet());
+					.map(e -> e.getKey()).collect(Collectors.toSet());
 			beginnings.forEach(k -> partitions.remove(k));
 			Set<TopicPartition> ends = partitions.entrySet().stream()
 					.filter(e -> SeekPosition.END.equals(e.getValue().seekPosition))
-					.map(e -> e.getKey())
-					.collect(Collectors.toSet());
+					.map(e -> e.getKey()).collect(Collectors.toSet());
 			ends.forEach(k -> partitions.remove(k));
 			if (beginnings.size() > 0) {
 				this.consumer.seekToBeginning(beginnings);
@@ -1286,20 +1284,20 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 							this.consumer.seekToEnd(Arrays.asList(topicPartition));
 						}
 						newOffset = Math.max(0, this.consumer.position(topicPartition) + offset);
-					}
-					else if (metadata.relativeToCurrent) {
+					} else if (metadata.relativeToCurrent) {
 						newOffset = this.consumer.position(topicPartition) + offset;
 					}
 
 					try {
 						this.consumer.seek(topicPartition, newOffset);
 						if (this.logger.isDebugEnabled()) {
-							this.logger.debug("Reset " + topicPartition + " to offset " + newOffset);
+							this.logger
+									.debug("Reset " + topicPartition + " to offset " + newOffset);
 						}
-					}
-					catch (Exception e) {
+					} catch (Exception e) {
 						this.logger.error("Failed to set initial offset for " + topicPartition
-								+ " at " + newOffset + ". Position is " + this.consumer.position(topicPartition), e);
+								+ " at " + newOffset + ". Position is "
+								+ this.consumer.position(topicPartition), e);
 					}
 				}
 			}
@@ -1314,8 +1312,9 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 		}
 
 		private void addOffset(ConsumerRecord<K, V> record) {
-			this.offsets.computeIfAbsent(record.topic(), v -> new ConcurrentHashMap<>())
-					.compute(record.partition(), (k, v) -> v == null ? record.offset() : Math.max(v, record.offset()));
+			this.offsets.computeIfAbsent(record.topic(), v -> new ConcurrentHashMap<>()).compute(
+					record.partition(),
+					(k, v) -> v == null ? record.offset() : Math.max(v, record.offset()));
 		}
 
 		private void commitIfNecessary() {
@@ -1328,12 +1327,10 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 				try {
 					if (this.containerProperties.isSyncCommits()) {
 						this.consumer.commitSync(commits);
-					}
-					else {
+					} else {
 						this.consumer.commitAsync(commits, this.commitCallback);
 					}
-				}
-				catch (WakeupException e) {
+				} catch (WakeupException e) {
 					// ignore - not polling
 					this.logger.debug("Woken up during commit");
 				}
@@ -1352,7 +1349,8 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 			return commits;
 		}
 
-		private Collection<ConsumerRecord<K, V>> getHighestOffsetRecords(List<ConsumerRecord<K, V>> records) {
+		private Collection<ConsumerRecord<K, V>> getHighestOffsetRecords(
+				List<ConsumerRecord<K, V>> records) {
 			final Map<TopicPartition, ConsumerRecord<K, V>> highestOffsetMap = new HashMap<>();
 			records.forEach(r -> {
 				highestOffsetMap.compute(new TopicPartition(r.topic(), r.partition()),
@@ -1368,7 +1366,8 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 		@Override
 		public void seekToBeginning(String topic, int partition) {
-			this.seeks.add(new TopicPartitionInitialOffset(topic, partition, SeekPosition.BEGINNING));
+			this.seeks
+					.add(new TopicPartitionInitialOffset(topic, partition, SeekPosition.BEGINNING));
 		}
 
 		@Override
@@ -1378,15 +1377,12 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 
 		@Override
 		public String toString() {
-			return "KafkaMessageListenerContainer.ListenerConsumer ["
-					+ "containerProperties=" + this.containerProperties
-					+ ", listenerType=" + this.listenerType
+			return "KafkaMessageListenerContainer.ListenerConsumer [" + "containerProperties="
+					+ this.containerProperties + ", listenerType=" + this.listenerType
 					+ ", isConsumerAwareListener=" + this.isConsumerAwareListener
-					+ ", isBatchListener=" + this.isBatchListener
-					+ ", autoCommit=" + this.autoCommit
-					+ ", consumerGroupId=" + this.consumerGroupId
-					+ ", clientIdSuffix=" + KafkaMessageListenerContainer.this.clientIdSuffix
-					+ "]";
+					+ ", isBatchListener=" + this.isBatchListener + ", autoCommit="
+					+ this.autoCommit + ", consumerGroupId=" + this.consumerGroupId
+					+ ", clientIdSuffix=" + KafkaMessageListenerContainer.this.clientIdSuffix + "]";
 		}
 
 		private final class ConsumerAcknowledgment implements Acknowledgment {
@@ -1447,11 +1443,11 @@ public class KafkaMessageListenerContainer<K, V> extends AbstractMessageListener
 		}
 
 		@Override
-		public void onComplete(Map<TopicPartition, OffsetAndMetadata> offsets, Exception exception) {
+		public void onComplete(Map<TopicPartition, OffsetAndMetadata> offsets,
+				Exception exception) {
 			if (exception != null) {
 				logger.error("Commit failed for " + offsets, exception);
-			}
-			else if (logger.isDebugEnabled()) {
+			} else if (logger.isDebugEnabled()) {
 				logger.debug("Commits for " + offsets + " completed");
 			}
 		}

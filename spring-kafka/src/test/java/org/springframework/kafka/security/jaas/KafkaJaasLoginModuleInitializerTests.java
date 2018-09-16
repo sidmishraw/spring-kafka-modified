@@ -29,7 +29,6 @@ import javax.security.auth.login.AppConfigurationEntry;
 import org.apache.kafka.common.security.JaasContext;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
