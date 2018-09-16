@@ -1,0 +1,59 @@
+[[deps-for-11x]]
+== Override Dependencies to use the 1.1.x/2.0.x kafka-clients with an Embedded Broker
+
+When using `spring-kafka-test` (version 2.1.x, starting with version 2.1.5) with the 1.1.x `kafka-clients` jar, you will need to override certain transitive dependencies as follows:
+
+[source, xml]
+----
+<dependency>
+    <groupId>org.springframework.kafka</groupId>
+    <artifactId>spring-kafka</artifactId>
+    <version>${spring.kafka.version}</version>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.kafka</groupId>
+    <artifactId>spring-kafka-test</artifactId>
+    <version>${spring.kafka.version}</version>
+    <scope>test</scope>
+</dependency>
+
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka-clients</artifactId>
+    <version>1.1.1</version>
+</dependency>
+
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka-clients</artifactId>
+    <version>1.1.1</version>
+    <classifier>test</classifier>
+</dependency>
+
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka_2.11</artifactId>
+    <version>1.1.1</version>
+    <scope>test</scope>
+</dependency>
+
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka_2.11</artifactId>
+    <version>1.1.1</version>
+    <classifier>test</classifier>
+    <scope>test</scope>
+</dependency>
+----
+
+Starting with version 2.1.9, the 2.0.0 `kafka-clients` jar can be used with similar overrides to those described above.
+
+IMPORTANT: When using the 2.0.0 clients with `spring-kafka` 2.1.x, the framework will continue to use the blocking `poll(long)` method to fetch records (future releases will use the `poll(Duration)` method).
+Other previously blocking consumer APIs will time out according to the `ConsumerConfig.DEFAULT_API_TIMEOUT_MS_CONFIG` (`default.api.timeout.ms`) property; refer to the https://kafka.apache.org/documentation/#upgrade_200_notable[Notable Changes in 2.0.0] section in the Kafka documentation for more information.
+
+[appendix]
+[[history]]
+== Change History
+
+include::./changes-since-1.0.adoc[]

@@ -1,0 +1,256 @@
+[[quick-tour]]
+=== Quick Tour for the Impatient
+
+==== Introduction
+
+This is the 5 minute tour to get started with Spring Kafka.
+
+Prerequisites: install and run Apache Kafka
+Then grab the spring-kafka JAR and all of its dependencies - the easiest way to do that is to declare a dependency in
+your build tool, e.g. for Maven:
+
+[source,xml,subs="+attributes"]
+----
+<dependency>
+  <groupId>org.springframework.kafka</groupId>
+  <artifactId>spring-kafka</artifactId>
+  <version>{spring-kafka-version}</version>
+</dependency>
+----
+
+And for Gradle:
+
+[source,groovy,subs="+attributes"]
+----
+compile 'org.springframework.kafka:spring-kafka:{spring-kafka-version}'
+----
+
+[[compatibility]]
+===== Compatibility
+
+- Apache Kafka Clients 1.0.x or later (See note below)
+- Spring Framework 5.0.x
+- Minimum Java version: 8
+
+NOTE: The framework has been tested with `kafka-clients` 1.1.1 and 2.0.0; when using the `spring-kafka-test` embedded Kafka broker, you must override other jars, as described in <<deps-for-11x>>.
+
+IMPORTANT: When using the 2.0.0 clients with `spring-kafka` 2.1.x, the framework will continue to use the blocking `poll(long)` method to fetch records (future releases will use the `poll(Duration)` method).
+Other previously blocking consumer APIs will time out according to the `ConsumerConfig.DEFAULT_API_TIMEOUT_MS_CONFIG` (`default.api.timeout.ms`) property; refer to the https://kafka.apache.org/documentation/#upgrade_200_notable[Notable Changes in 2.0.0] section in the Kafka documentation for more information.
+
+===== Very, Very Quick
+
+Using plain Java to send and receive a message:
+
+[source,java]
+----
+@Test
+public void testAutoCommit() throws Exception {
+    logger.info("Start auto");
+    ContainerProperties containerProps = new ContainerProperties("topic1", "topic2");
+    final CountDownLatch latch = new CountDownLatch(4);
+    containerProps.setMessageListener(new MessageListener<Integer, String>() {
+
+        @Override
+        public void onMessage(ConsumerRecord<Integer, String> message) {
+            logger.info("received: " + message);
+            latch.countDown();
+        }
+
+    });
+    KafkaMessageListenerContainer<Integer, String> container = createContainer(containerProps);
+    container.setBeanName("testAuto");
+    container.start();
+    Thread.sleep(1000); // wait a bit for the container to start
+    KafkaTemplate<Integer, String> template = createTemplate();
+    template.setDefaultTopic(topic1);
+    template.sendDefault(0, "foo");
+    template.sendDefault(2, "bar");
+    template.sendDefault(0, "baz");
+    template.sendDefault(2, "qux");
+    template.flush();
+    assertTrue(latch.await(60, TimeUnit.SECONDS));
+    container.stop();
+    logger.info("Stop auto");
+
+}
+----
+
+[source, java]
+----
+private KafkaMessageListenerContainer<Integer, String> createContainer(
+                        ContainerProperties containerProps) {
+    Map<String, Object> props = consumerProps();
+    DefaultKafkaConsumerFactory<Integer, String> cf =
+                            new DefaultKafkaConsumerFactory<Integer, String>(props);
+    KafkaMessageListenerContainer<Integer, String> container =
+                            new KafkaMessageListenerContainer<>(cf, containerProps);
+    return container;
+}
+
+private KafkaTemplate<Integer, String> createTemplate() {
+    Map<String, Object> senderProps = senderProps();
+    ProducerFactory<Integer, String> pf =
+              new DefaultKafkaProducerFactory<Integer, String>(senderProps);
+    KafkaTemplate<Integer, String> template = new KafkaTemplate<>(pf);
+    return template;
+}
+
+private Map<String, Object> consumerProps() {
+    Map<String, Object> props = new HashMap<>();
+    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+    props.put(ConsumerConfig.GROUP_ID_CONFIG, group);
+    props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
+    props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "100");
+    props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, "15000");
+    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, IntegerDeserializer.class);
+    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+    return props;
+}
+
+private Map<String, Object> senderProps() {
+    Map<String, Object> props = new HashMap<>();
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+    props.put(ProducerConfig.RETRIES_CONFIG, 0);
+    props.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
+    props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
+    props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
+    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, IntegerSerializer.class);
+    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+    return props;
+}
+----
+
+===== With Java Configuration
+
+A similar example but with Spring configuration in Java:
+
+[source,java]
+----
+@Autowired
+private Listener listener;
+
+@Autowired
+private KafkaTemplate<Integer, String> template;
+
+@Test
+public void testSimple() throws Exception {
+    template.send("annotated1", 0, "foo");
+    template.flush();
+    assertTrue(this.listener.latch1.await(10, TimeUnit.SECONDS));
+}
+
+@Configuration
+@EnableKafka
+public class Config {
+
+    @Bean
+    ConcurrentKafkaListenerContainerFactory<Integer, String>
+                        kafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<Integer, String> factory =
+                                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<Integer, String> consumerFactory() {
+        return new DefaultKafkaConsumerFactory<>(consumerConfigs());
+    }
+
+    @Bean
+    public Map<String, Object> consumerConfigs() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, embeddedKafka.getBrokersAsString());
+        ...
+        return props;
+    }
+
+    @Bean
+    public Listener listener() {
+        return new Listener();
+    }
+
+    @Bean
+    public ProducerFactory<Integer, String> producerFactory() {
+        return new DefaultKafkaProducerFactory<>(producerConfigs());
+    }
+
+    @Bean
+    public Map<String, Object> producerConfigs() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, embeddedKafka.getBrokersAsString());
+        ...
+        return props;
+    }
+
+    @Bean
+    public KafkaTemplate<Integer, String> kafkaTemplate() {
+        return new KafkaTemplate<Integer, String>(producerFactory());
+    }
+
+}
+----
+
+[source, java]
+----
+public class Listener {
+
+    private final CountDownLatch latch1 = new CountDownLatch(1);
+
+    @KafkaListener(id = "foo", topics = "annotated1")
+    public void listen1(String foo) {
+        this.latch1.countDown();
+    }
+
+}
+----
+
+===== Even Quicker, with Spring Boot
+
+The following Spring Boot application sends 3 messages to a topic, receives them, and stops.
+
+.Application
+[source, java]
+----
+@SpringBootApplication
+public class Application implements CommandLineRunner {
+
+    public static Logger logger = LoggerFactory.getLogger(Application.class);
+
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args).close();
+    }
+
+    @Autowired
+    private KafkaTemplate<String, String> template;
+
+    private final CountDownLatch latch = new CountDownLatch(3);
+
+    @Override
+    public void run(String... args) throws Exception {
+        this.template.send("myTopic", "foo1");
+        this.template.send("myTopic", "foo2");
+        this.template.send("myTopic", "foo3");
+        latch.await(60, TimeUnit.SECONDS);
+        logger.info("All received");
+    }
+
+    @KafkaListener(topics = "myTopic")
+    public void listen(ConsumerRecord<?, ?> cr) throws Exception {
+        logger.info(cr.toString());
+        latch.countDown();
+    }
+
+}
+----
+
+Boot takes care of most of the configuration; when using a local broker, the only properties we need are:
+
+.application.properties
+[source]
+----
+spring.kafka.consumer.group-id=foo
+spring.kafka.consumer.auto-offset-reset=earliest
+----
+
+The first because we are using group management to assign topic partitions to consumers so we need a group, the second to ensure the new consumer group will get the messages we just sent, because the container might start after the sends have completed.
